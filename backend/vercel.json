@@ -18,11 +18,5 @@
   "github": {
     "enabled": true,
     "silent": true
-  },
-  "functions": {
-    "handler/handler.go": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
   }
 } 
