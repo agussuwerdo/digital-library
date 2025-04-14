@@ -8,6 +8,7 @@ import (
 	"digital-library/backend/routes"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	// Add routes import later
 )
 
@@ -23,11 +24,18 @@ func main() {
 
 	app := fiber.New()
 
-	// Setup Routes
-	routes.SetupRoutes(app)
+	// Configure CORS
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:3000", // Frontend URL
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+	}))
 
-	log.Println("Starting server on port 3000...")
-	if err := app.Listen(":3000"); err != nil {
+	// Setup Routes
+	routes.SetupRoutes(app, cfg)
+
+	log.Println("Starting server on port 3001...")
+	if err := app.Listen(":3001"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

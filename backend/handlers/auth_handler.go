@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"time"
 
-	"digital-library/backend/config" // Assuming config is setup to load JWTSecret
+	"digital-library/backend/config"
+	"digital-library/backend/database"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,8 +19,74 @@ type LoginPayload struct {
 	Password string `json:"password"`
 }
 
+// RegisterPayload defines the expected structure for the registration request body
+type RegisterPayload struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+
+// User represents a user in the system
+type User struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Register handles user registration
+func Register(c *fiber.Ctx) error {
+	payload := new(RegisterPayload)
+	if err := c.BodyParser(payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Cannot parse JSON",
+		})
+	}
+
+	// Basic validation
+	if payload.Username == "" || payload.Password == "" || payload.Email == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Username, password, and email are required",
+		})
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Could not hash password",
+		})
+	}
+
+	// Insert the new user
+	query := `INSERT INTO users (username, password_hash, email, role) 
+	          VALUES ($1, $2, $3, 'user') 
+	          RETURNING id, username, email, role, created_at, updated_at`
+
+	var user User
+	err = database.DB.QueryRow(context.Background(), query,
+		payload.Username, string(hashedPassword), payload.Email).
+		Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+
+	if err != nil {
+		// Check for unique constraint violation
+		if err.Error() == "pq: duplicate key value violates unique constraint" {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Username or email already exists",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Could not create user",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(user)
+}
+
 // Login handles user authentication and JWT generation
-func Login(cfg *config.Config) fiber.Handler { // Pass config to access JWT secret
+func Login(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		payload := new(LoginPayload)
 		if err := c.BodyParser(payload); err != nil {
@@ -25,26 +95,39 @@ func Login(cfg *config.Config) fiber.Handler { // Pass config to access JWT secr
 			})
 		}
 
-		// --- Hardcoded user validation (Replace with DB lookup in a real app) ---
-		// IMPORTANT: This is insecure and only for demonstration purposes.
-		if payload.Username != "librarian" || payload.Password != "password123" {
+		// Query the user from the database
+		var user User
+		var passwordHash string
+		query := `SELECT id, username, email, role, password_hash, created_at, updated_at 
+		          FROM users WHERE username = $1`
+
+		err := database.DB.QueryRow(context.Background(), query, payload.Username).
+			Scan(&user.ID, &user.Username, &user.Email, &user.Role, &passwordHash, &user.CreatedAt, &user.UpdatedAt)
+
+		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid credentials",
 			})
 		}
 
-		// --- Generate JWT ---
+		// Compare the provided password with the stored hash
+		err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(payload.Password))
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid credentials",
+			})
+		}
+
+		// Generate JWT
 		claims := jwt.MapClaims{
-			"username": payload.Username,
-			"role":     "librarian",                           // Example claim
-			"exp":      time.Now().Add(time.Hour * 72).Unix(), // Token expires in 72 hours
+			"user_id":  user.ID,
+			"username": user.Username,
+			"role":     user.Role,
+			"exp":      time.Now().Add(time.Hour * 72).Unix(),
 			"iat":      time.Now().Unix(),
 		}
 
-		// Create token
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-		// Generate encoded token and send it as response.
 		t, err := token.SignedString([]byte(cfg.JWTSecret))
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -52,6 +135,9 @@ func Login(cfg *config.Config) fiber.Handler { // Pass config to access JWT secr
 			})
 		}
 
-		return c.JSON(fiber.Map{"token": t})
+		return c.JSON(fiber.Map{
+			"token": t,
+			"user":  user,
+		})
 	}
 }

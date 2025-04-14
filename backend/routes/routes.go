@@ -1,48 +1,50 @@
 package routes
 
 import (
-	// "digital-library/backend/handlers"
-	// "digital-library/backend/middleware"
+	"digital-library/backend/config"     // Import config
+	"digital-library/backend/handlers"   // Import handlers
+	"digital-library/backend/middleware" // Import middleware
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	// jwtware "github.com/gofiber/jwt/v3" // Import later when middleware is implemented
 )
 
 // SetupRoutes sets up all the routes for the application
-func SetupRoutes(app *fiber.App) {
+func SetupRoutes(app *fiber.App, cfg *config.Config) { // Accept config
 	// Middleware
 	app.Use(logger.New()) // Add basic request logging
 
 	// Public routes
 	api := app.Group("/api")
-	// api.Post("/login", handlers.Login) // TODO: Implement auth handler
+	api.Post("/register", handlers.Register) // Add registration route
+	api.Post("/login", handlers.Login(cfg))  // Add login route, pass config
 
 	// --- JWT Protected Routes ---
-	// TODO: Apply JWT Middleware here once implemented
-	// Example: app.Use(middleware.Protected())
+	// Apply JWT middleware to groups below
+	protected := api.Group("", middleware.Protected(cfg)) // Create a group with the middleware
 
-	// Book routes
-	book := api.Group("/books")
-	// book.Post("/", handlers.CreateBook)    // TODO: Implement book handlers
-	// book.Get("/", handlers.GetBooks)
-	// book.Get("/:id", handlers.GetBook)
-	// book.Put("/:id", handlers.UpdateBook)
-	// book.Delete("/:id", handlers.DeleteBook)
+	// Book routes (now protected)
+	book := protected.Group("/books")
+	book.Post("/", handlers.CreateBook)      // Connect CreateBook handler
+	book.Get("/", handlers.GetBooks)         // Connect GetBooks handler
+	book.Get("/:id", handlers.GetBook)       // Connect GetBook handler
+	book.Put("/:id", handlers.UpdateBook)    // Connect UpdateBook handler
+	book.Delete("/:id", handlers.DeleteBook) // Connect DeleteBook handler
 
-	// Lending routes
-	lending := api.Group("/lending")
-	// lending.Post("/lend", handlers.LendBook)       // TODO: Implement lending handlers
-	// lending.Post("/return/:id", handlers.ReturnBook) // :id is lending record id
-	// lending.Get("/", handlers.GetLendingRecords)
-	// lending.Delete("/:id", handlers.DeleteLendingRecord)
+	// Lending routes (now protected)
+	lending := protected.Group("/lending")
+	lending.Post("/lend", handlers.LendBook)             // Connect LendBook handler
+	lending.Post("/return/:id", handlers.ReturnBook)     // Connect ReturnBook handler
+	lending.Get("/", handlers.GetLendingRecords)         // Connect GetLendingRecords handler
+	lending.Delete("/:id", handlers.DeleteLendingRecord) // Connect DeleteLendingRecord handler
 
-	// Analytics routes
-	analytics := api.Group("/analytics")
-	// analytics.Get("/most-borrowed", handlers.GetMostBorrowedBooks) // TODO: Implement analytics handlers
-	// analytics.Get("/monthly-trends", handlers.GetMonthlyLendingTrends)
-	// analytics.Get("/category-distribution", handlers.GetCategoryDistribution)
+	// Analytics routes (now protected)
+	analytics := protected.Group("/analytics")
+	analytics.Get("/most-borrowed", handlers.GetMostBorrowedBooks)            // Connect analytics handler
+	analytics.Get("/monthly-trends", handlers.GetMonthlyLendingTrends)        // Connect analytics handler
+	analytics.Get("/category-distribution", handlers.GetCategoryDistribution) // Connect analytics handler
 
-	// Health Check (optional)
+	// Health Check (optional - public)
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
