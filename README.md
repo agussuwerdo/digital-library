@@ -82,6 +82,92 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 ```
 
+## API Documentation
+
+*(TODO: Integrate Swagger/OpenAPI documentation generation for the backend API. This typically involves adding annotations to the Go handlers and using a tool like `swag` (`github.com/swaggo/swag`) to generate the spec.)*
+
 ## Setup Instructions
 
-*(TODO: Add setup instructions for backend, frontend, and database)* 
+Follow these steps to set up and run the project locally.
+
+### Prerequisites
+
+- **Node.js** (v18 or later recommended) and npm/yarn
+- **Go** (v1.18 or later recommended)
+- **PostgreSQL** (running instance)
+- **Git**
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-repository-url> # Replace with the actual URL
+cd digital-library
+```
+
+### 2. Backend Setup (Golang API)
+
+a. **Navigate to backend directory:**
+   ```bash
+   cd backend
+   ```
+
+b. **Create `.env` file:**
+   Create a `.env` file in the `backend` directory and add the following environment variables. Replace the placeholders with your actual database credentials and a secure JWT secret.
+   ```dotenv
+   # Example .env file for backend
+   DATABASE_URL="postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:YOUR_PORT/YOUR_DB_NAME?sslmode=disable"
+   JWT_SECRET="your_very_strong_and_secret_jwt_key_here_minimum_32_chars"
+   ```
+   *Example `DATABASE_URL` for a typical local setup: `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/digital_library?sslmode=disable"`*
+
+c. **Install dependencies:**
+   If you haven't already during development:
+   ```bash
+   go mod tidy
+   ```
+
+d. **Database Migration:**
+   Connect to your PostgreSQL instance using a tool like `psql` or a GUI client (e.g., DBeaver, pgAdmin). Create the database specified in your `DATABASE_URL` (e.g., `digital_library`). Then, execute the SQL commands found in the [Database Schema](#database-schema-postgresql) section of this README within that database to create the necessary tables (`books`, `lending_records`) and the `update_updated_at_column` trigger function.
+
+e. **Run the backend server:**
+   ```bash
+   go run main.go
+   ```
+   The backend API should now be running, typically on `http://localhost:3000`.
+
+### 3. Frontend Setup (Next.js App)
+
+a. **Navigate to frontend directory:**
+   From the project root directory (`digital-library`):
+   ```bash
+   cd frontend
+   ```
+
+b. **Install dependencies:**
+   ```bash
+   npm install
+   # or if you prefer yarn: yarn install
+   ```
+
+c. **Environment Variables (Optional but Recommended):**
+   The frontend defaults to connecting to `http://localhost:3000/api`. If your backend is running elsewhere, create a `.env.local` file in the `frontend` directory:
+   ```dotenv
+   # Example .env.local for frontend
+   NEXT_PUBLIC_API_URL=http://localhost:3000/api 
+   ```
+
+d. **Run the frontend development server:**
+   ```bash
+   npm run dev
+   # or yarn dev
+   ```
+   The frontend application should now be running, typically on `http://localhost:3001` (Next.js often defaults here if 3000 is taken).
+
+### 4. Accessing the Application
+
+- Open your browser and navigate to the frontend URL (e.g., `http://localhost:3001`).
+- Use the hardcoded login credentials (defined in `backend/handlers/auth_handler.go`):
+    - **Username:** `librarian`
+    - **Password:** `password123`
+
+*(End of file)* 
