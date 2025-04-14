@@ -1,12 +1,13 @@
 'use client'; // Mark as client component
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import * as api from '@/lib/api'; // Import API functions
 import { useAuth } from '@/context/AuthContext'; // Import useAuth
 
-export default function LoginPage() {
+// Separate component for the login form
+function LoginForm() {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -15,7 +16,7 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login: authLogin } = useAuth(); // Get login function from context, renamed to avoid conflict
+  const { login: authLogin } = useAuth();
 
   useEffect(() => {
     // Check if redirected from registration
@@ -39,12 +40,10 @@ export default function LoginPage() {
       } else {
         setError('Login failed: No token received.');
       }
-    } catch (err: unknown) { // Use unknown type for caught error
+    } catch (err: unknown) {
       console.error('Login Error:', err);
-      // Type guard or assertion to access properties safely
       let message = 'An unexpected error occurred during login.';
       if (typeof err === 'object' && err !== null && 'message' in err) {
-        // Ensure the message property is a string
         message = String((err as { message: unknown }).message);
       }
       setError(message);
@@ -128,5 +127,14 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
