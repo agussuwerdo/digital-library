@@ -9,11 +9,11 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "handler/handler.go"
     }
   ],
   "env": {
-    "FRONTEND_URL": "https://digital-library-frontend.vercel.app"
+    "FRONTEND_URL": "https://digital-library-frontend.werdev.my.id"
   },
   "github": {
     "enabled": true,

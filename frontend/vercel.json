@@ -13,7 +13,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://digital-library-backend.vercel.app/api"
+    "NEXT_PUBLIC_API_URL": "https://digital-library-backend.werdev.my.id/api"
   },
   "github": {
     "enabled": true,
