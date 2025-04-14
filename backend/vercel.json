@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "main.go",
+      "src": "handler/handler.go",
       "use": "@vercel/go"
     }
   ],
@@ -18,5 +18,11 @@
   "github": {
     "enabled": true,
     "silent": true
+  },
+  "functions": {
+    "handler/handler.go": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
   }
 } 
