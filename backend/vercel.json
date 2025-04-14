@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "main.go",
+      "use": "@vercel/go"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
+  "env": {
+    "FRONTEND_URL": "https://digital-library-frontend.vercel.app"
+  },
+  "github": {
+    "enabled": true,
+    "silent": true
+  }
+} 

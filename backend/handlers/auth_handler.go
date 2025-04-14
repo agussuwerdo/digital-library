@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"digital-library/backend/config"
@@ -40,6 +41,7 @@ type User struct {
 func Register(c *fiber.Ctx) error {
 	payload := new(RegisterPayload)
 	if err := c.BodyParser(payload); err != nil {
+		log.Printf("Error parsing registration payload: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Cannot parse JSON",
 		})
@@ -47,6 +49,8 @@ func Register(c *fiber.Ctx) error {
 
 	// Basic validation
 	if payload.Username == "" || payload.Password == "" || payload.Email == "" {
+		log.Printf("Invalid registration attempt - missing fields. Username: %v, Email: %v",
+			payload.Username != "", payload.Email != "")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Username, password, and email are required",
 		})
@@ -55,6 +59,7 @@ func Register(c *fiber.Ctx) error {
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("Error hashing password: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Could not hash password",
 		})
@@ -72,16 +77,26 @@ func Register(c *fiber.Ctx) error {
 
 	if err != nil {
 		// Check for unique constraint violation
-		if err.Error() == "pq: duplicate key value violates unique constraint" {
+		if err.Error() == "pq: duplicate key value violates unique constraint \"users_username_key\"" {
+			log.Printf("Registration failed: Duplicate username '%s'", payload.Username)
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-				"error": "Username or email already exists",
+				"error": "Username already exists",
+			})
+		} else if err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"" {
+			log.Printf("Registration failed: Duplicate email '%s'", payload.Email)
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Email already exists",
 			})
 		}
+
+		log.Printf("Database error during registration: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Could not create user",
+			"error":   "Could not create user. Please try again later.",
+			"details": err.Error(),
 		})
 	}
 
+	log.Printf("User registered successfully: %s (ID: %d)", user.Username, user.ID)
 	return c.Status(fiber.StatusCreated).JSON(user)
 }
 

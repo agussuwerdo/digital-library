@@ -1,7 +1,10 @@
 import { Book, LendingRecordDetail, BorrowCount, MonthlyTrend, CategoryDistribution } from '@/lib/types';
 
 // Base URL for the backend API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://your-backend-project.vercel.app/api' 
+    : 'http://localhost:3001/api');
 
 // Helper function to get JWT token from storage
 const getToken = (): string | null => {
