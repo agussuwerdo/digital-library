@@ -34,13 +34,13 @@ function LoginForm() {
 
     try {
       const response = await api.login({ username: formData.username, password: formData.password });
-      if (response.token) {
+      if (response.token && response.user) {
         // Store the token and update state via context
-        authLogin(response.token);
+        authLogin(response.token, response.user);
         // Redirect to dashboard
         router.push('/dashboard');
       } else {
-        setError('Login failed: No token received.');
+        setError('Login failed: Invalid response format.');
       }
     } catch (err: unknown) {
       console.error('Login Error:', err);
@@ -98,7 +98,7 @@ function LoginForm() {
                 type="text"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
+                placeholder="Username or Email"
                 value={formData.username}
                 onChange={handleChange}
                 disabled={loading}

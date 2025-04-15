@@ -4,9 +4,17 @@
     {
       "src": "handler/handler.go",
       "use": "@vercel/go"
+    },
+    {
+      "src": "docs/swagger.json",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/api/apidocs",
+      "dest": "/docs/swagger.json"
+    },
     {
       "src": "/(.*)",
       "dest": "handler/handler.go"
@@ -19,4 +27,4 @@
     "enabled": true,
     "silent": true
   }
-} 
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
+	"strings"
 
 	// Needed for models.Book
 	"digital-library/backend/database"
@@ -14,58 +15,20 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// --- Book Handlers ---
-
-// CreateBook handles the creation of a new book
-func CreateBook(c *fiber.Ctx) error {
-	book := new(models.Book)
-
-	// Parse the request body into the book struct
-	if err := c.BodyParser(book); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Cannot parse JSON",
-		})
-	}
-
-	// Basic validation (Add more as needed)
-	if book.Title == "" || book.Author == "" || book.ISBN == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Title, Author, and ISBN are required fields",
-		})
-	}
-	if book.Quantity < 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Quantity cannot be negative",
-		})
-	}
-
-	// SQL query to insert the book
-	query := `INSERT INTO books (title, author, isbn, quantity, category) 
-	          VALUES ($1, $2, $3, $4, $5) 
-	          RETURNING id, created_at, updated_at`
-
-	// Execute the query
-	row := database.DB.QueryRow(context.Background(), query,
-		book.Title, book.Author, book.ISBN, book.Quantity, book.Category)
-
-	// Scan the returned id, created_at, updated_at into the book struct
-	err := row.Scan(&book.ID, &book.CreatedAt, &book.UpdatedAt)
-	if err != nil {
-		// Handle potential errors, e.g., duplicate ISBN
-		log.Printf("Error creating book: %v", err) // Log the error
-		// TODO: Check for specific pgx errors like unique constraint violation (e.g., using pgconn.PgError)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Could not create book", // Consider more specific error messages
-		})
-	}
-
-	// Return the newly created book
-	return c.Status(fiber.StatusCreated).JSON(book)
-}
-
-// GetBooks retrieves all books from the database with optional search and filtering
+// @Summary Get all books
+// @Description Get all books with optional search and filtering
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param search query string false "Search term for title or author"
+// @Param category query string false "Filter by category"
+// @Param author query string false "Filter by author"
+// @Param available query string false "Filter by availability (true/false)"
+// @Success 200 {array} models.Book
+// @Failure 500 {object} map[string]string
+// @Router /books [get]
 func GetBooks(c *fiber.Ctx) error {
-	// Get query parameters with default empty string values
+	// Get query parameters
 	search := c.Query("search", "")
 	category := c.Query("category", "")
 	author := c.Query("author", "")
@@ -79,8 +42,7 @@ func GetBooks(c *fiber.Ctx) error {
 
 	// Add search condition (matches title or author)
 	if search != "" {
-		query += ` AND (LOWER(title) LIKE LOWER($` + strconv.Itoa(argCount) + `) 
-		           OR LOWER(author) LIKE LOWER($` + strconv.Itoa(argCount) + `))`
+		query += ` AND (LOWER(title) LIKE LOWER($` + strconv.Itoa(argCount) + `) OR LOWER(author) LIKE LOWER($` + strconv.Itoa(argCount) + `))`
 		args = append(args, "%"+search+"%")
 		argCount++
 	}
@@ -109,7 +71,6 @@ func GetBooks(c *fiber.Ctx) error {
 	// Add sorting
 	query += ` ORDER BY title ASC`
 
-	// Execute query
 	rows, err := database.DB.Query(context.Background(), query, args...)
 	if err != nil {
 		log.Printf("Error fetching books: %v", err)
@@ -146,10 +107,18 @@ func GetBooks(c *fiber.Ctx) error {
 	return c.JSON(books)
 }
 
-// GetBook retrieves a single book by its ID
+// @Summary Get a book by ID
+// @Description Get a single book by its ID
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Success 200 {object} models.Book
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /books/{id} [get]
 func GetBook(c *fiber.Ctx) error {
 	id := c.Params("id")
-	// TODO: Add validation to ensure id is a number if needed
 
 	query := `SELECT id, title, author, isbn, quantity, category, created_at, updated_at 
 	          FROM books WHERE id = $1`
@@ -164,12 +133,10 @@ func GetBook(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			// Book not found
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Book not found",
 			})
 		}
-		// Other potential errors
 		log.Printf("Error fetching book %s: %v", id, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Could not retrieve book",
@@ -179,7 +146,72 @@ func GetBook(c *fiber.Ctx) error {
 	return c.JSON(book)
 }
 
-// UpdateBook handles updating an existing book
+// @Summary Create a new book
+// @Description Create a new book with the provided information
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param book body models.Book true "Book object"
+// @Success 201 {object} models.Book
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /books [post]
+func CreateBook(c *fiber.Ctx) error {
+	book := new(models.Book)
+
+	if err := c.BodyParser(book); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Cannot parse JSON",
+		})
+	}
+
+	if book.Title == "" || book.Author == "" || book.ISBN == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Title, Author, and ISBN are required fields",
+		})
+	}
+	if book.Quantity < 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Quantity cannot be negative",
+		})
+	}
+
+	query := `INSERT INTO books (title, author, isbn, quantity, category) 
+	          VALUES ($1, $2, $3, $4, $5) 
+	          RETURNING id, created_at, updated_at`
+
+	row := database.DB.QueryRow(context.Background(), query,
+		book.Title, book.Author, book.ISBN, book.Quantity, book.Category)
+
+	err := row.Scan(&book.ID, &book.CreatedAt, &book.UpdatedAt)
+	if err != nil {
+		log.Printf("Error creating book: %v", err)
+		// Check if error is due to duplicate ISBN
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"books_isbn_key\"") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "A book with this ISBN already exists",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Could not create book",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(book)
+}
+
+// @Summary Update a book
+// @Description Update an existing book with the provided information
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Param book body models.Book true "Book object"
+// @Success 200 {object} models.Book
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /books/{id} [put]
 func UpdateBook(c *fiber.Ctx) error {
 	id := c.Params("id")
 	// TODO: Add validation for ID
@@ -224,6 +256,12 @@ func UpdateBook(c *fiber.Ctx) error {
 				"error": "Book not found",
 			})
 		}
+		// Check if error is due to duplicate ISBN
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"books_isbn_key\"") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "A book with this ISBN already exists",
+			})
+		}
 		// Handle other errors like unique constraint violation on ISBN
 		log.Printf("Error updating book %s: %v", id, err)
 		// TODO: Check for specific pgx errors
@@ -235,7 +273,16 @@ func UpdateBook(c *fiber.Ctx) error {
 	return c.JSON(updatedBook)
 }
 
-// DeleteBook handles deleting a book by its ID
+// @Summary Delete a book
+// @Description Delete a book by its ID
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /books/{id} [delete]
 func DeleteBook(c *fiber.Ctx) error {
 	id := c.Params("id")
 	// TODO: Add validation for ID

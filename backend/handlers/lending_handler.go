@@ -21,7 +21,17 @@ type LendBookPayload struct {
 	Borrower string `json:"borrower"`
 }
 
-// LendBook handles lending a book to a borrower
+// @Summary Lend a book
+// @Description Create a new lending record for a book
+// @Tags lending
+// @Accept json
+// @Produce json
+// @Param lending body models.LendingRecord true "Lending record object"
+// @Success 201 {object} models.LendingRecord
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /lending [post]
 func LendBook(c *fiber.Ctx) error {
 	payload := new(LendBookPayload)
 	if err := c.BodyParser(payload); err != nil {
@@ -93,7 +103,16 @@ func LendBook(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(newRecord)
 }
 
-// ReturnBook handles marking a lending record as returned and increments book quantity
+// @Summary Return a book
+// @Description Mark a lending record as returned and update book availability
+// @Tags lending
+// @Accept json
+// @Produce json
+// @Param id path int true "Lending Record ID"
+// @Success 200 {object} models.LendingRecord
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /lending/{id}/return [put]
 func ReturnBook(c *fiber.Ctx) error {
 	lendingRecordID := c.Params("id")
 	// TODO: Add validation for lendingRecordID
@@ -159,7 +178,17 @@ type LendingRecordDetail struct {
 	BookAuthor           string `json:"book_author"`
 }
 
-// GetLendingRecords retrieves all lending records, joining with book details, with optional search and filtering
+// @Summary Get lending records
+// @Description Get all lending records with optional search and filtering
+// @Tags lending
+// @Accept json
+// @Produce json
+// @Param search query string false "Search term"
+// @Param status query string false "Filter by status (active/returned)"
+// @Param book_id query int false "Filter by book ID"
+// @Success 200 {array} models.LendingRecord
+// @Failure 500 {object} map[string]string
+// @Router /lending [get]
 func GetLendingRecords(c *fiber.Ctx) error {
 	// Get query parameters
 	search := c.Query("search", "")
@@ -246,8 +275,16 @@ func GetLendingRecords(c *fiber.Ctx) error {
 	return c.JSON(records)
 }
 
-// DeleteLendingRecord handles deleting a lending record by its ID
-// Note: Consider implications for historical data. Deleting returned records might not be ideal.
+// @Summary Delete a lending record
+// @Description Delete a lending record by its ID
+// @Tags lending
+// @Accept json
+// @Produce json
+// @Param id path int true "Lending Record ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /lending/{id} [delete]
 func DeleteLendingRecord(c *fiber.Ctx) error {
 	lendingRecordID := c.Params("id")
 	// TODO: Add validation for lendingRecordID

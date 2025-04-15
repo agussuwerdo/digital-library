@@ -74,6 +74,14 @@ const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = 
 
 interface LoginResponse {
   token: string;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    role: 'admin' | 'user';
+    created_at: string;
+    updated_at: string;
+  };
 }
 
 interface RegisterResponse {

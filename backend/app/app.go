@@ -3,6 +3,7 @@ package app
 import (
 	"log"
 	"os"
+	"strings"
 
 	"digital-library/backend/config"
 	"digital-library/backend/database"
@@ -12,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 )
 
 // QueryParamsMiddleware extracts query parameters from the request
@@ -63,26 +65,37 @@ func SetupApp() *fiber.App {
 
 	// Configure CORS
 	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:3000"
+	allowOrigins := []string{"http://localhost:3000", "http://127.0.0.1:3000"} // Default local development URLs
+	if frontendURL != "" {
+		allowOrigins = append(allowOrigins, frontendURL)
 	}
+
+	// Filter out empty strings and join the origins
+	validOrigins := make([]string, 0)
+	for _, origin := range allowOrigins {
+		if origin != "" {
+			validOrigins = append(validOrigins, origin)
+		}
+	}
+
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     frontendURL,
+		AllowOrigins:     strings.Join(validOrigins, ","),
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, Access-Control-Allow-Origin",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS, PATCH",
 		AllowCredentials: true,
 		ExposeHeaders:    "Content-Length, Access-Control-Allow-Origin",
 		MaxAge:           3600,
-		Next:             nil,
-		AllowOriginsFunc: nil,
 	}))
 
-	// Add logger middleware with more detailed configuration
+	// Add logger middleware
 	app.Use(logger.New(logger.Config{
 		Format:     "${time} | ${status} | ${latency} | ${method} | ${path} | ${error}\n",
 		TimeFormat: "2006-01-02 15:04:05",
 		TimeZone:   "Local",
 	}))
+
+	// Setup Swagger
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// Setup Routes
 	routes.SetupRoutes(app, cfg)

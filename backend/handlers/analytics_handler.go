@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"digital-library/backend/database"
+	"digital-library/backend/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -16,7 +17,14 @@ type BorrowCount struct {
 	Borrows   int    `json:"borrows"`
 }
 
-// GetMostBorrowedBooks retrieves books ordered by borrow count
+// @Summary Get most borrowed books
+// @Description Get a list of books ordered by number of times borrowed
+// @Tags analytics
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Book
+// @Failure 500 {object} map[string]string
+// @Router /analytics/most-borrowed [get]
 func GetMostBorrowedBooks(c *fiber.Ctx) error {
 	// Default limit to top 10, could make this a query param later
 	limit := 10
@@ -63,13 +71,14 @@ func GetMostBorrowedBooks(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// MonthlyTrend represents the structure for monthly lending counts
-type MonthlyTrend struct {
-	Month string `json:"month"` // Format YYYY-MM
-	Count int    `json:"count"`
-}
-
-// GetMonthlyLendingTrends retrieves lending counts grouped by month
+// @Summary Get monthly lending trends
+// @Description Get lending counts grouped by month
+// @Tags analytics
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.MonthlyTrend
+// @Failure 500 {object} map[string]string
+// @Router /analytics/monthly-trends [get]
 func GetMonthlyLendingTrends(c *fiber.Ctx) error {
 	// Query to count records per month based on borrow_date
 	// Adjust the time period (e.g., last 12 months) if needed
@@ -90,9 +99,9 @@ func GetMonthlyLendingTrends(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	results := make([]MonthlyTrend, 0)
+	results := make([]models.MonthlyTrend, 0)
 	for rows.Next() {
-		var mt MonthlyTrend
+		var mt models.MonthlyTrend
 		err := rows.Scan(&mt.Month, &mt.Count)
 		if err != nil {
 			log.Printf("Error scanning monthly trend row: %v", err)
@@ -113,13 +122,14 @@ func GetMonthlyLendingTrends(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// CategoryDistribution represents the count of books per category
-type CategoryDistribution struct {
-	Category string `json:"category"`
-	Count    int    `json:"count"`
-}
-
-// GetCategoryDistribution retrieves the count of books per category
+// @Summary Get category distribution
+// @Description Get the distribution of books across categories
+// @Tags analytics
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.CategoryDistribution
+// @Failure 500 {object} map[string]string
+// @Router /analytics/category-distribution [get]
 func GetCategoryDistribution(c *fiber.Ctx) error {
 	// Query to count books per category. Handle NULL categories.
 	query := `SELECT 
@@ -138,9 +148,9 @@ func GetCategoryDistribution(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	results := make([]CategoryDistribution, 0)
+	results := make([]models.CategoryDistribution, 0)
 	for rows.Next() {
-		var cd CategoryDistribution
+		var cd models.CategoryDistribution
 		err := rows.Scan(&cd.Category, &cd.Count)
 		if err != nil {
 			log.Printf("Error scanning category distribution row: %v", err)

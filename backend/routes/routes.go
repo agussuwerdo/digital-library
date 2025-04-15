@@ -4,6 +4,8 @@ import (
 	"digital-library/backend/config"     // Import config
 	"digital-library/backend/handlers"   // Import handlers
 	"digital-library/backend/middleware" // Import middleware
+	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -18,6 +20,22 @@ func SetupRoutes(app *fiber.App, cfg *config.Config) { // Accept config
 	api := app.Group("/api")
 	api.Post("/register", handlers.Register) // Add registration route
 	api.Post("/login", handlers.Login(cfg))  // Add login route, pass config
+
+	// Serve Swagger documentation
+	api.Get("/apidocs", func(c *fiber.Ctx) error {
+		// Read the Swagger JSON file
+		swaggerPath := filepath.Join("docs", "swagger.json")
+		swaggerData, err := os.ReadFile(swaggerPath)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to read Swagger documentation: " + err.Error(),
+			})
+		}
+
+		// Set the content type and serve the Swagger JSON
+		c.Set("Content-Type", "application/json")
+		return c.Send(swaggerData)
+	})
 
 	// --- JWT Protected Routes ---
 	// Apply JWT middleware to groups below

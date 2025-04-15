@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"digital-library/backend/config"
 	"digital-library/backend/database"
+	"digital-library/backend/models"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -14,32 +16,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// LoginPayload defines the expected structure for the login request body
-type LoginPayload struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-// RegisterPayload defines the expected structure for the registration request body
-type RegisterPayload struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-}
-
-// User represents a user in the system
-type User struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// Register handles user registration
+// @Summary Register a new user
+// @Description Create a new user account with the provided information
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User object"
+// @Success 201 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /register [post]
 func Register(c *fiber.Ctx) error {
-	payload := new(RegisterPayload)
+	payload := new(models.RegisterRequest)
 	if err := c.BodyParser(payload); err != nil {
 		log.Printf("Error parsing registration payload: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -70,25 +58,24 @@ func Register(c *fiber.Ctx) error {
 	          VALUES ($1, $2, $3, 'user') 
 	          RETURNING id, username, email, role, created_at, updated_at`
 
-	var user User
+	var user models.User
 	err = database.DB.QueryRow(context.Background(), query,
 		payload.Username, string(hashedPassword), payload.Email).
 		Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		// Check for unique constraint violation
-		if err.Error() == "pq: duplicate key value violates unique constraint \"users_username_key\"" {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"users_username_key\"") {
 			log.Printf("Registration failed: Duplicate username '%s'", payload.Username)
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error": "Username already exists",
 			})
-		} else if err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"" {
+		} else if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"users_email_key\"") {
 			log.Printf("Registration failed: Duplicate email '%s'", payload.Email)
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error": "Email already exists",
 			})
 		}
-
 		log.Printf("Database error during registration: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Could not create user. Please try again later.",
@@ -100,10 +87,20 @@ func Register(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(user)
 }
 
-// Login handles user authentication and JWT generation
+// @Summary Login user
+// @Description Authenticate user and return JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body models.LoginRequest true "Login credentials"
+// @Success 200 {object} models.LoginResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /login [post]
 func Login(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		payload := new(LoginPayload)
+		payload := new(models.LoginRequest)
 		if err := c.BodyParser(payload); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Cannot parse JSON",
@@ -111,10 +108,10 @@ func Login(cfg *config.Config) fiber.Handler {
 		}
 
 		// Query the user from the database
-		var user User
+		var user models.User
 		var passwordHash string
 		query := `SELECT id, username, email, role, password_hash, created_at, updated_at 
-		          FROM users WHERE username = $1`
+		          FROM users WHERE username = $1 OR email = $1`
 
 		err := database.DB.QueryRow(context.Background(), query, payload.Username).
 			Scan(&user.ID, &user.Username, &user.Email, &user.Role, &passwordHash, &user.CreatedAt, &user.UpdatedAt)

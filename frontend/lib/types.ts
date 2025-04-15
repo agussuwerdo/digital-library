@@ -10,6 +10,16 @@ export interface Book {
   updated_at: string;
 }
 
+// User type definition
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: 'admin' | 'user';
+  created_at: string;
+  updated_at: string;
+}
+
 // Matches backend/handlers/lending_handler.go -> LendingRecordDetail
 export interface LendingRecordDetail {
   id: number;

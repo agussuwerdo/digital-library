@@ -26,7 +26,6 @@ export default function SearchFilter({ filters, placeholder = 'Search...', class
     });
     return initialFilters;
   });
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const updateUrlParams = (term: string, filters: Record<string, string>) => {
     const params = new URLSearchParams();
@@ -37,14 +36,14 @@ export default function SearchFilter({ filters, placeholder = 'Search...', class
     router.replace(`?${params.toString()}`);
   };
 
-  const handleSearchChange = (term: string) => {
-    setSearchTerm(term);
-    if (debounceTimeout.current) {
-      clearTimeout(debounceTimeout.current);
+  const handleSearch = () => {
+    updateUrlParams(searchTerm, selectedFilters);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
-    debounceTimeout.current = setTimeout(() => {
-      updateUrlParams(term, selectedFilters);
-    }, 1500);
   };
 
   const handleFilterChange = (name: string, value: string) => {
@@ -56,15 +55,6 @@ export default function SearchFilter({ filters, placeholder = 'Search...', class
     updateUrlParams(searchTerm, newFilters);
   };
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-    };
-  }, []);
-
   // Maintain input focus after URL updates
   useEffect(() => {
     if (searchInputRef.current) {
@@ -74,23 +64,22 @@ export default function SearchFilter({ filters, placeholder = 'Search...', class
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className="relative">
+      <div className="relative flex">
         <input
           ref={searchInputRef}
           type="text"
           placeholder={placeholder}
           value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        {searchTerm && (
-          <button
-            onClick={() => handleSearchChange('')}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            ×
-          </button>
-        )}
+        <button
+          onClick={handleSearch}
+          className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          Search
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-4">

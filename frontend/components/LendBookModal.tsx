@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import * as api from '@/lib/api';
 import { Book } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
 
 interface LendBookModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function LendBookModal({ isOpen, onClose, onSave }: LendBookModal
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [booksLoading, setBooksLoading] = useState(false);
+  const { user } = useAuth();
 
   // Fetch available books when the modal opens
   useEffect(() => {
@@ -40,6 +42,15 @@ export default function LendBookModal({ isOpen, onClose, onSave }: LendBookModal
         });
     }
   }, [isOpen]);
+
+  // Set borrower name based on user role when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      if (user.role === 'user') {
+        setBorrower(user.username);
+      }
+    }
+  }, [isOpen, user]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,7 +90,7 @@ export default function LendBookModal({ isOpen, onClose, onSave }: LendBookModal
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
       <div className="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
         <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-          Lend a Book
+          {user?.role === 'admin' ? 'Lend a Book' : 'Borrow a Book'}
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -118,7 +129,8 @@ export default function LendBookModal({ isOpen, onClose, onSave }: LendBookModal
               onChange={(e) => setBorrower(e.target.value)} 
               required 
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
-              disabled={loading}
+              disabled={loading || (user?.role === 'user')}
+              readOnly={user?.role === 'user'}
             />
           </div>
 
