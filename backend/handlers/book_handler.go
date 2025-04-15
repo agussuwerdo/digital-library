@@ -65,7 +65,7 @@ func CreateBook(c *fiber.Ctx) error {
 
 // GetBooks retrieves all books from the database with optional search and filtering
 func GetBooks(c *fiber.Ctx) error {
-	// Get query parameters
+	// Get query parameters with default empty string values
 	search := c.Query("search", "")
 	category := c.Query("category", "")
 	author := c.Query("author", "")
@@ -79,7 +79,8 @@ func GetBooks(c *fiber.Ctx) error {
 
 	// Add search condition (matches title or author)
 	if search != "" {
-		query += ` AND (LOWER(title) LIKE LOWER($` + strconv.Itoa(argCount) + `) OR LOWER(author) LIKE LOWER($` + strconv.Itoa(argCount) + `))`
+		query += ` AND (LOWER(title) LIKE LOWER($` + strconv.Itoa(argCount) + `) 
+		           OR LOWER(author) LIKE LOWER($` + strconv.Itoa(argCount) + `))`
 		args = append(args, "%"+search+"%")
 		argCount++
 	}
@@ -108,6 +109,7 @@ func GetBooks(c *fiber.Ctx) error {
 	// Add sorting
 	query += ` ORDER BY title ASC`
 
+	// Execute query
 	rows, err := database.DB.Query(context.Background(), query, args...)
 	if err != nil {
 		log.Printf("Error fetching books: %v", err)

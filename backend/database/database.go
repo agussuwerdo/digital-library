@@ -22,20 +22,33 @@ func Connect(cfg *config.Config) {
 		log.Fatalf("Unable to parse database config: %v\n", err)
 	}
 
-	// Optional: Configure pool settings
-	dbConfig.MaxConns = 10                      // Example: Set max connections
-	dbConfig.MinConns = 2                       // Example: Set min connections
-	dbConfig.MaxConnLifetime = time.Hour        // Example: Max connection lifetime
-	dbConfig.MaxConnIdleTime = time.Minute * 30 // Example: Max idle time
-
-	// Connect to the database
-	DB, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+	// Configure pool settings for production
+	dbConfig.MaxConns = 25                      // Increased max connections
+	dbConfig.MinConns = 5                       // Increased min connections
+	dbConfig.MaxConnLifetime = time.Hour * 2    // Increased connection lifetime
+	dbConfig.MaxConnIdleTime = time.Minute * 30 // Keep idle time the same
+	dbConfig.ConnConfig.RuntimeParams = map[string]string{
+		"application_name": "digital_library",
+		"search_path":      "public",
 	}
 
-	// Optional: Ping the database to verify connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Connect to the database with retry logic
+	var pool *pgxpool.Pool
+	for i := 0; i < 3; i++ {
+		pool, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
+		if err == nil {
+			break
+		}
+		log.Printf("Attempt %d to connect to database failed: %v\n", i+1, err)
+		time.Sleep(time.Second * 2)
+	}
+	if err != nil {
+		log.Fatalf("Unable to connect to database after retries: %v\n", err)
+	}
+	DB = pool
+
+	// Verify connection with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err = DB.Ping(ctx)
 	if err != nil {

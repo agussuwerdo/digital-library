@@ -14,6 +14,28 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
+// QueryParamsMiddleware extracts query parameters from the request
+func QueryParamsMiddleware(c *fiber.Ctx) error {
+	// Get the original request
+	req := c.Request()
+
+	// Log the original request details
+	log.Printf("QueryParamsMiddleware - Original URI: %s", string(req.RequestURI()))
+	log.Printf("QueryParamsMiddleware - Raw Query: %s", string(req.URI().QueryString()))
+
+	// If there's no query string in the URI, try to get it from the context
+	if len(req.URI().QueryString()) == 0 {
+		// Try to get query from context
+		if queryStr, ok := c.Context().Value("query_string").(string); ok && queryStr != "" {
+			// Set the query string in the request
+			req.URI().SetQueryString(queryStr)
+			log.Printf("QueryParamsMiddleware - Set query from context: %s", queryStr)
+		}
+	}
+
+	return c.Next()
+}
+
 // SetupApp creates and configures a new Fiber app
 func SetupApp() *fiber.App {
 	// Load Config
@@ -35,6 +57,9 @@ func SetupApp() *fiber.App {
 
 	// Add recover middleware to catch panics
 	app.Use(recover.New())
+
+	// Add query params middleware
+	app.Use(QueryParamsMiddleware)
 
 	// Configure CORS
 	frontendURL := os.Getenv("FRONTEND_URL")
