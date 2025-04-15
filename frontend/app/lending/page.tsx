@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import * as api from '@/lib/api';
 import { LendingRecordDetail } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +9,7 @@ import LendBookModal from '@/components/LendBookModal'; // Import the modal
 import SearchFilter from '@/components/SearchFilter';
 import { useSearchParams } from 'next/navigation';
 
-export default function LendingPage() {
+function LendingContent() {
   const [records, setRecords] = useState<LendingRecordDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -202,5 +202,13 @@ export default function LendingPage() {
         onSave={handleLendSave}
       />
     </div>
+  );
+}
+
+export default function LendingPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <LendingContent />
+    </Suspense>
   );
 }

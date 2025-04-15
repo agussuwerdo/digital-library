@@ -1,7 +1,7 @@
 'use client';
 
 // FORCE APPLY MARKER
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import * as api from '@/lib/api';
 import { Book } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext'; // To ensure user is authenticated
@@ -9,7 +9,7 @@ import BookFormModal from '@/components/BookFormModal'; // Import the modal
 import SearchFilter from '@/components/SearchFilter';
 import { useSearchParams } from 'next/navigation';
 
-export default function BooksPage() {
+function BooksContent() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -191,5 +191,13 @@ export default function BooksPage() {
         onSave={handleSave} 
       />
     </div>
+  );
+}
+
+export default function BooksPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <BooksContent />
+    </Suspense>
   );
 }
