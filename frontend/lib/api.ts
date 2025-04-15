@@ -3,7 +3,7 @@ import { Book, LendingRecordDetail, BorrowCount, MonthlyTrend, CategoryDistribut
 // Base URL for the backend API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (process.env.NODE_ENV === 'production' 
-    ? 'https://your-backend-project.vercel.app/api' 
+    ? 'https://digital-library-backend.werdev.my.id/api' 
     : 'http://localhost:3001/api');
 
 // Helper function to get JWT token from storage
@@ -22,12 +22,12 @@ const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = 
   // Use Record<string, string> for headers to allow arbitrary keys
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    // Spread existing headers if any (might need adjustment based on RequestInit['headers'] type)
+    'Accept': 'application/json',
     ...(options.headers as Record<string, string>),
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`; // Now allowed
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   let response: Response;
@@ -35,8 +35,10 @@ const apiRequest = async <T = unknown>(endpoint: string, options: RequestInit = 
     response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include',
+      mode: 'cors',
     });
-  } catch (networkError: unknown) { // Catch network errors
+  } catch (networkError: unknown) {
     console.error('Network Error:', networkError);
     throw { status: 0, message: 'Network error, could not connect to API' };
   }

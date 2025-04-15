@@ -43,11 +43,13 @@ func SetupApp() *fiber.App {
 	}
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     frontendURL,
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, Access-Control-Allow-Origin",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS, PATCH",
 		AllowCredentials: true,
-		ExposeHeaders:    "Content-Length",
+		ExposeHeaders:    "Content-Length, Access-Control-Allow-Origin",
 		MaxAge:           3600,
+		Next:             nil,
+		AllowOriginsFunc: nil,
 	}))
 
 	// Add logger middleware with more detailed configuration
