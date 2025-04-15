@@ -32,7 +32,7 @@ ChartJS.register(
 );
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,12 +41,13 @@ export default function DashboardPage() {
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated && user) {
       setLoading(true);
+      
       Promise.all([
-        api.getMostBorrowed(),
-        api.getMonthlyTrends(),
-        api.getCategoryDistribution(),
+        api.getMostBorrowed(user.username, user.role),
+        api.getMonthlyTrends(user.username, user.role),
+        api.getCategoryDistribution(user.username, user.role),
       ]).then(([borrowedData, trendsData, categoryData]) => {
         setMostBorrowed(borrowedData);
         setMonthlyTrends(trendsData);
@@ -61,12 +62,12 @@ export default function DashboardPage() {
     } else if (!authLoading && !isAuthenticated) {
       setLoading(false); // Stop loading if not authenticated
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, user]);
 
   if (authLoading || loading) {
     return <div className="p-8 text-center">Loading dashboard...</div>;
   }
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return null; 
   }
   if (error) {
@@ -130,6 +131,8 @@ export default function DashboardPage() {
     },
   };
 
+  const titlePrefix = user.role === 'admin' ? 'All' : 'Your';
+
   return (
     <div className="p-8">
       <h1 className="text-3xl font-bold mb-6">Analytics Dashboard</h1>
@@ -137,10 +140,10 @@ export default function DashboardPage() {
         
         {/* Most Borrowed Books Chart */} 
         <div className="bg-white p-4 rounded shadow" style={{ height: '400px' }}>
-          <h2 className="text-xl font-semibold mb-4 text-center">Most Borrowed Books</h2>
+          <h2 className="text-xl font-semibold mb-4 text-center">{titlePrefix} Most Borrowed Books</h2>
           <div style={{ height: 'calc(100% - 40px)' }}> {/* Adjust height accounting for title */}
             <Bar 
-              options={ { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: 'Top 10 Most Borrowed Books'} } } }
+              options={ { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: `${titlePrefix} Top 10 Most Borrowed Books`} } } }
               data={mostBorrowedChartData} 
             />
           </div>
@@ -148,10 +151,10 @@ export default function DashboardPage() {
 
         {/* Monthly Lending Trends Chart */} 
         <div className="bg-white p-4 rounded shadow" style={{ height: '400px' }}>
-          <h2 className="text-xl font-semibold mb-4 text-center">Monthly Lending Trends</h2>
+          <h2 className="text-xl font-semibold mb-4 text-center">{titlePrefix} Monthly Lending Trends</h2>
           <div style={{ height: 'calc(100% - 40px)' }}>
             <Line 
-              options={ { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: 'Lends per Month'} } } }
+              options={ { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: `${titlePrefix} Lends per Month`} } } }
               data={monthlyTrendsChartData} 
             />
           </div>
@@ -159,10 +162,10 @@ export default function DashboardPage() {
 
         {/* Books by Category Chart */} 
         <div className="bg-white p-4 rounded shadow md:col-span-2" style={{ height: '400px' }}>
-          <h2 className="text-xl font-semibold mb-4 text-center">Books by Category</h2>
+          <h2 className="text-xl font-semibold mb-4 text-center">{titlePrefix} Books by Category</h2>
            <div style={{ height: 'calc(100% - 40px)', width:'50%', margin: 'auto' }}> {/* Center pie chart */}
              <Pie 
-               options={ { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: 'Book Distribution by Category'} } } }
+               options={ { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: `${titlePrefix} Book Distribution by Category`} } } }
                data={categoryDistributionChartData} 
              />
           </div>

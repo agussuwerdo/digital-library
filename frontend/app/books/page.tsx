@@ -13,12 +13,14 @@ function BooksContent() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isAuthenticated, isLoading: authLoading } = useAuth(); // Get auth state
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth(); // Get auth state and user info
 
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null); // Add state for selected book
   const searchParams = useSearchParams();
+
+  const isAdmin = user?.role === 'admin'; // Check if user is admin
 
   const fetchBooks = useCallback(async (params: Record<string, string> = {}) => {
     if (!isAuthenticated) return;
@@ -124,13 +126,15 @@ function BooksContent() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Book Management</h1>
-        {/* Connect Add Book Button */}
-        <button 
-          onClick={() => handleOpenModal(null)} // Open modal for adding (pass null)
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Add New Book
-        </button>
+        {/* Only show Add Book button for admin users */}
+        {isAdmin && (
+          <button 
+            onClick={() => handleOpenModal(null)}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Add New Book
+          </button>
+        )}
       </div>
       
       {/* Books Table */}
@@ -144,13 +148,18 @@ function BooksContent() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISBN</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                {/* Only show Actions column for admin users */}
+                {isAdmin && (
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {books.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No books found. Add one to get started!</td>
+                  <td colSpan={isAdmin ? 6 : 5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    No books found. {isAdmin ? 'Add one to get started!' : ''}
+                  </td>
                 </tr>
               ) : (
                 books.map((book) => (
@@ -160,20 +169,23 @@ function BooksContent() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{book.isbn}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{book.category || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{book.quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button 
-                        onClick={() => handleOpenModal(book)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(book.id)} 
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </td>
+                    {/* Only show action buttons for admin users */}
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button 
+                          onClick={() => handleOpenModal(book)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(book.id)} 
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -182,13 +194,15 @@ function BooksContent() {
         </div>
       </div>
 
-      {/* Render the modal conditionally */}
-      <BookFormModal 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal} 
-        bookToEdit={selectedBook} 
-        onSave={handleSave} 
-      />
+      {/* Only render the modal for admin users */}
+      {isAdmin && (
+        <BookFormModal 
+          isOpen={isModalOpen} 
+          onClose={handleCloseModal} 
+          bookToEdit={selectedBook} 
+          onSave={handleSave} 
+        />
+      )}
     </div>
   );
 }

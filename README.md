@@ -93,16 +93,15 @@ The database is automatically populated with:
 The application has two user roles with different access levels:
 
 1. **Admin Role**:
-   - Can access all features and pages
+   - Can access the admin dashboard
    - Can manage books (add, edit, delete)
    - Can manage lending records
-   - Can access the admin dashboard
    - Can view API documentation
 
 2. **User Role**:
-   - Can only borrow books
-   - Can view their own lending history
-   - Can view available books
+   - Can view dashboard
+   - Can view and search books
+   - Can book and view their own lending records
 
 The navigation menu automatically adjusts based on the user's role:
 - Admin users see all navigation items
@@ -451,4 +450,37 @@ The application is configured for deployment on Vercel:
 - Backend: Deployed as Vercel Serverless Functions
 - Database: Hosted on a PostgreSQL provider of your choice
 
-For detailed deployment instructions, refer to the deployment documentation in the respective frontend and backend directories. 
+### Local Development Setup
+
+1. **Backend Setup**:
+   ```bash
+   cd backend
+   go mod download
+   go run main.go
+   ```
+
+   The backend API should now be running on `http://localhost:3000`.
+
+2. **Frontend Setup**:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+   The frontend application should now be running on `http://localhost:3001`.
+
+3. **Environment Variables**:
+   - Create `.env` files in both frontend and backend directories
+   - Configure database connection, JWT secret, and other settings
+
+4. **Generate Swagger Documentation**:
+   ```bash
+   cd backend
+   swag init
+   ```
+
+
+### License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 

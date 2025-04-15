@@ -193,16 +193,28 @@ export const deleteLendingRecord = async (lendingRecordId: string | number): Pro
   });
 };
 
-// --- Analytics API (Placeholders) --- 
+// --- Analytics API --- 
 
-export const getMostBorrowed = async (): Promise<BorrowCount[]> => {
-  return apiRequest<BorrowCount[]>('/analytics/most-borrowed');
+export const getMostBorrowed = async (username?: string, role?: string): Promise<BorrowCount[]> => {
+  const queryParams = new URLSearchParams();
+  if (username) queryParams.append('username', username);
+  if (role) queryParams.append('role', role);
+  const queryString = queryParams.toString();
+  return apiRequest<BorrowCount[]>(`/analytics/most-borrowed${queryString ? `?${queryString}` : ''}`);
 };
 
-export const getMonthlyTrends = async (): Promise<MonthlyTrend[]> => {
-  return apiRequest<MonthlyTrend[]>('/analytics/monthly-trends');
+export const getMonthlyTrends = async (username?: string, role?: string): Promise<MonthlyTrend[]> => {
+  const queryParams = new URLSearchParams();
+  if (username) queryParams.append('username', username);
+  if (role) queryParams.append('role', role);
+  const queryString = queryParams.toString();
+  return apiRequest<MonthlyTrend[]>(`/analytics/monthly-trends${queryString ? `?${queryString}` : ''}`);
 };
 
-export const getCategoryDistribution = async (): Promise<CategoryDistribution[]> => {
-  return apiRequest<CategoryDistribution[]>('/analytics/category-distribution');
+export const getCategoryDistribution = async (username?: string, role?: string): Promise<CategoryDistribution[]> => {
+  const queryParams = new URLSearchParams();
+  if (username) queryParams.append('username', username);
+  if (role) queryParams.append('role', role);
+  const queryString = queryParams.toString();
+  return apiRequest<CategoryDistribution[]>(`/analytics/category-distribution${queryString ? `?${queryString}` : ''}`);
 }; 

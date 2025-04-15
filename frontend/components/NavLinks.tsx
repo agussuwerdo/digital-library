@@ -13,6 +13,8 @@ const adminLinks = [
 ];
 
 const userLinks = [
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Books', href: '/books' },
   { name: 'Lending', href: '/lending' },
 ];
 
