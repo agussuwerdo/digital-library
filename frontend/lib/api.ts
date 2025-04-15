@@ -108,8 +108,9 @@ export const register = async (userData: { username: string; password: string; e
 // (Mirroring backend/models/Book but omitting server-generated fields)
 type BookInput = Omit<Book, 'id' | 'created_at' | 'updated_at'>;
 
-export const getBooks = async (): Promise<Book[]> => {
-  return apiRequest<Book[]>('/books'); 
+export const getBooks = async (params?: Record<string, string>): Promise<Book[]> => {
+  const queryString = params ? new URLSearchParams(params).toString() : '';
+  return apiRequest<Book[]>(`/books${queryString ? `?${queryString}` : ''}`); 
 };
 
 export const getBook = async (id: string | number): Promise<Book> => {
@@ -144,8 +145,9 @@ export const deleteBook = async (id: string | number): Promise<DeleteResponse> =
 
 // --- Lending API (Placeholders) --- 
 
-export const getLendingRecords = async (): Promise<LendingRecordDetail[]> => {
-  return apiRequest<LendingRecordDetail[]>('/lending');
+export const getLendingRecords = async (params?: Record<string, string>): Promise<LendingRecordDetail[]> => {
+  const queryString = params ? new URLSearchParams(params).toString() : '';
+  return apiRequest<LendingRecordDetail[]>(`/lending${queryString ? `?${queryString}` : ''}`);
 };
 
 interface LendBookPayload {

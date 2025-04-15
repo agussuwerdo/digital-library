@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as api from '@/lib/api';
 import { LendingRecordDetail } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns'; // For formatting dates
 import LendBookModal from '@/components/LendBookModal'; // Import the modal
+import SearchFilter from '@/components/SearchFilter';
+import { useSearchParams } from 'next/navigation';
 
 export default function LendingPage() {
   const [records, setRecords] = useState<LendingRecordDetail[]>([]);
@@ -15,30 +17,35 @@ export default function LendingPage() {
 
   // State for Lend Book Modal
   const [isLendModalOpen, setIsLendModalOpen] = useState(false);
+  const searchParams = useSearchParams();
 
-  const fetchLendingRecords = () => {
-    setLoading(true);
-    api.getLendingRecords()
-      .then(data => {
-        setRecords(data);
-        setError(null);
-      })
-      .catch(err => {
-        console.error("Failed to fetch lending records:", err);
-        setError(err.message || "Failed to fetch records");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+  const fetchLendingRecords = useCallback(async (params: Record<string, string> = {}) => {
+    if (!isAuthenticated) return;
+    
+    try {
+      setLoading(true);
+      const data = await api.getLendingRecords(params);
+      setRecords(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
 
+  // Handle search from URL parameters
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      fetchLendingRecords();
+      const params: Record<string, string> = {};
+      searchParams.forEach((value, key) => {
+        params[key] = value;
+      });
+      fetchLendingRecords(params);
     } else if (!authLoading && !isAuthenticated) {
       setLoading(false);
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, searchParams, fetchLendingRecords]);
 
   const handleReturn = async (recordId: number) => {
     if (window.confirm('Mark this book as returned?')) {
@@ -88,6 +95,17 @@ export default function LendingPage() {
     fetchLendingRecords(); // Refresh the list
   };
 
+  const lendingFilters = [
+    {
+      name: 'status',
+      label: 'Status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'returned', label: 'Returned' },
+      ],
+    },
+  ];
+
   if (authLoading || loading) {
     return <div className="p-8 text-center">Loading...</div>;
   }
@@ -109,7 +127,7 @@ export default function LendingPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Lending Management</h1>
         <button 
@@ -119,6 +137,12 @@ export default function LendingPage() {
           Lend New Book
         </button>
       </div>
+
+      <SearchFilter
+        filters={lendingFilters}
+        placeholder="Search by book title or borrower..."
+        className="mb-8"
+      />
 
       {/* Lending Records Table */}
       <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">

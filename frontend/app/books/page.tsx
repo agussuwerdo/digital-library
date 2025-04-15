@@ -1,11 +1,13 @@
 'use client';
 
 // FORCE APPLY MARKER
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as api from '@/lib/api';
 import { Book } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext'; // To ensure user is authenticated
 import BookFormModal from '@/components/BookFormModal'; // Import the modal
+import SearchFilter from '@/components/SearchFilter';
+import { useSearchParams } from 'next/navigation';
 
 export default function BooksPage() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -16,34 +18,37 @@ export default function BooksPage() {
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null); // Add state for selected book
+  const searchParams = useSearchParams();
 
-  // Function to fetch books (can be reused for refresh)
-  const fetchBooks = () => {
-    setLoading(true);
-    api.getBooks()
-      .then(data => {
-        setBooks(data);
-        setError(null);
-      })
-      .catch(err => {
-        console.error("Failed to fetch books:", err);
-        setError(err.message || "Failed to fetch books");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
-
+  const fetchBooks = useCallback(async (params: Record<string, string> = {}) => {
+    if (!isAuthenticated) return;
+  
+    try {
+      setLoading(true);
+      const data = await api.getBooks(params);
+      setBooks(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+  
+  // Handle search from URL parameters
   useEffect(() => {
-    // Fetch only when auth is no longer loading and user is authenticated
     if (!authLoading && isAuthenticated) {
-      fetchBooks();
+      const params: Record<string, string> = {};
+      searchParams.forEach((value, key) => {
+        params[key] = value;
+      });
+      fetchBooks(params);
     } else if (!authLoading && !isAuthenticated) {
       // If auth is done loading and user is not authenticated, stop loading state
       // AuthProvider should handle the redirect already
       setLoading(false);
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, searchParams, fetchBooks]);
 
   // --- Modal Handlers --- 
   const handleOpenModal = (book: Book | null = null) => {
@@ -80,6 +85,17 @@ export default function BooksPage() {
     }
   };
 
+  const bookFilters = [
+    {
+      name: 'available',
+      label: 'Availability',
+      options: [
+        { value: 'true', label: 'Available' },
+        { value: 'false', label: 'Borrowed' },
+      ],
+    },
+  ];
+
   // Display loading state
   if (authLoading || loading) {
     return <div className="p-8 text-center">Loading...</div>;
@@ -97,7 +113,15 @@ export default function BooksPage() {
 
   // Display Book Management UI
   return (
-    <div className="p-8">
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Books</h1>
+      
+      <SearchFilter
+        filters={bookFilters}
+        placeholder="Search by title or author..."
+        className="mb-8"
+      />
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Book Management</h1>
         {/* Connect Add Book Button */}

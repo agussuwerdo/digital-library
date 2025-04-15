@@ -14,6 +14,7 @@ function LoginForm() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login: authLogin } = useAuth();
@@ -29,6 +30,7 @@ function LoginForm() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setLoading(true);
 
     try {
       const response = await api.login({ username: formData.username, password: formData.password });
@@ -47,6 +49,8 @@ function LoginForm() {
         message = String((err as { message: unknown }).message);
       }
       setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,6 +101,7 @@ function LoginForm() {
                 placeholder="Username"
                 value={formData.username}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
             <div>
@@ -112,6 +117,7 @@ function LoginForm() {
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
           </div>
@@ -119,9 +125,10 @@ function LoginForm() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              disabled={loading}
             >
-              Sign in
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>

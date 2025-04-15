@@ -22,29 +22,17 @@ func Connect(cfg *config.Config) {
 		log.Fatalf("Unable to parse database config: %v\n", err)
 	}
 
-	// Optimize for serverless environment
-	dbConfig.MaxConns = 5                        // Reduced max connections for serverless
-	dbConfig.MinConns = 1                        // Keep minimum connections low
-	dbConfig.MaxConnLifetime = time.Minute * 5   // Shorter lifetime for serverless
-	dbConfig.MaxConnIdleTime = time.Minute * 1   // Shorter idle time
-	dbConfig.HealthCheckPeriod = time.Second * 5 // More frequent health checks
+	// Optional: Configure pool settings
+	dbConfig.MaxConns = 10                      // Example: Set max connections
+	dbConfig.MinConns = 2                       // Example: Set min connections
+	dbConfig.MaxConnLifetime = time.Hour        // Example: Max connection lifetime
+	dbConfig.MaxConnIdleTime = time.Minute * 30 // Example: Max idle time
 
-	// Add connection retry logic
-	var pool *pgxpool.Pool
-	for i := 0; i < 3; i++ {
-		pool, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
-		if err == nil {
-			break
-		}
-		log.Printf("Attempt %d: Failed to connect to database: %v\n", i+1, err)
-		time.Sleep(time.Second * 2)
-	}
-
+	// Connect to the database
+	DB, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
-		log.Fatalf("Unable to connect to database after retries: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-
-	DB = pool
 
 	// Optional: Ping the database to verify connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

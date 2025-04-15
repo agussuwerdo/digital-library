@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"log"
+	"strconv"
 
 	// Needed for models.Book
 	"digital-library/backend/database"
@@ -62,12 +63,52 @@ func CreateBook(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(book)
 }
 
-// GetBooks retrieves all books from the database
+// GetBooks retrieves all books from the database with optional search and filtering
 func GetBooks(c *fiber.Ctx) error {
-	query := `SELECT id, title, author, isbn, quantity, category, created_at, updated_at 
-	          FROM books ORDER BY title ASC`
+	// Get query parameters
+	search := c.Query("search", "")
+	category := c.Query("category", "")
+	author := c.Query("author", "")
+	available := c.Query("available", "")
 
-	rows, err := database.DB.Query(context.Background(), query)
+	// Build the base query
+	query := `SELECT id, title, author, isbn, quantity, category, created_at, updated_at 
+	          FROM books WHERE 1=1`
+	args := []interface{}{}
+	argCount := 1
+
+	// Add search condition (matches title or author)
+	if search != "" {
+		query += ` AND (LOWER(title) LIKE LOWER($` + strconv.Itoa(argCount) + `) OR LOWER(author) LIKE LOWER($` + strconv.Itoa(argCount) + `))`
+		args = append(args, "%"+search+"%")
+		argCount++
+	}
+
+	// Add category filter
+	if category != "" {
+		query += ` AND LOWER(category) = LOWER($` + strconv.Itoa(argCount) + `)`
+		args = append(args, category)
+		argCount++
+	}
+
+	// Add author filter
+	if author != "" {
+		query += ` AND LOWER(author) = LOWER($` + strconv.Itoa(argCount) + `)`
+		args = append(args, author)
+		argCount++
+	}
+
+	// Add availability filter
+	if available == "true" {
+		query += ` AND quantity > 0`
+	} else if available == "false" {
+		query += ` AND quantity = 0`
+	}
+
+	// Add sorting
+	query += ` ORDER BY title ASC`
+
+	rows, err := database.DB.Query(context.Background(), query, args...)
 	if err != nil {
 		log.Printf("Error fetching books: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -86,7 +127,6 @@ func GetBooks(c *fiber.Ctx) error {
 		)
 		if err != nil {
 			log.Printf("Error scanning book row: %v", err)
-			// Decide if you want to return partial results or an error
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error processing book data",
 			})
@@ -94,7 +134,7 @@ func GetBooks(c *fiber.Ctx) error {
 		books = append(books, book)
 	}
 
-	if rows.Err() != nil { // Check for errors during iteration
+	if rows.Err() != nil {
 		log.Printf("Error iterating book rows: %v", rows.Err())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Error retrieving book data",

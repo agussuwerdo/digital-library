@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
 	// For custom errors
@@ -158,18 +159,57 @@ type LendingRecordDetail struct {
 	BookAuthor           string `json:"book_author"`
 }
 
-// GetLendingRecords retrieves all lending records, optionally joining with book details
+// GetLendingRecords retrieves all lending records, joining with book details, with optional search and filtering
 func GetLendingRecords(c *fiber.Ctx) error {
-	// Query to join lending_records with books
+	// Get query parameters
+	search := c.Query("search", "")
+	borrower := c.Query("borrower", "")
+	status := c.Query("status", "") // "active" or "returned"
+	bookTitle := c.Query("bookTitle", "")
+
+	// Build the base query
 	query := `SELECT 
 	            lr.id, lr.book_id, lr.borrower_name, lr.borrow_date, lr.return_date, 
 	            lr.created_at, lr.updated_at, 
 	            b.title AS book_title, b.author AS book_author
 	          FROM lending_records lr
 	          JOIN books b ON lr.book_id = b.id
-	          ORDER BY lr.borrow_date DESC, lr.created_at DESC` // Order by borrow date descending
+	          WHERE 1=1`
+	args := []interface{}{}
+	argCount := 1
 
-	rows, err := database.DB.Query(context.Background(), query)
+	// Add search condition (matches borrower name or book title)
+	if search != "" {
+		query += ` AND (LOWER(lr.borrower_name) LIKE LOWER($` + strconv.Itoa(argCount) + `) OR LOWER(b.title) LIKE LOWER($` + strconv.Itoa(argCount) + `))`
+		args = append(args, "%"+search+"%")
+		argCount++
+	}
+
+	// Add borrower filter
+	if borrower != "" {
+		query += ` AND LOWER(lr.borrower_name) = LOWER($` + strconv.Itoa(argCount) + `)`
+		args = append(args, borrower)
+		argCount++
+	}
+
+	// Add status filter
+	if status == "active" {
+		query += ` AND lr.return_date IS NULL`
+	} else if status == "returned" {
+		query += ` AND lr.return_date IS NOT NULL`
+	}
+
+	// Add book title filter
+	if bookTitle != "" {
+		query += ` AND LOWER(b.title) = LOWER($` + strconv.Itoa(argCount) + `)`
+		args = append(args, bookTitle)
+		argCount++
+	}
+
+	// Add sorting
+	query += ` ORDER BY lr.borrow_date DESC, lr.created_at DESC`
+
+	rows, err := database.DB.Query(context.Background(), query, args...)
 	if err != nil {
 		log.Printf("Error fetching lending records: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

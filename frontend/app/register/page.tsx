@@ -12,11 +12,13 @@ export default function RegisterPage() {
     email: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       await api.register(formData);
@@ -24,6 +26,8 @@ export default function RegisterPage() {
       router.push('/login?registered=true');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,6 +73,7 @@ export default function RegisterPage() {
                 placeholder="Username"
                 value={formData.username}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
             <div>
@@ -84,6 +89,7 @@ export default function RegisterPage() {
                 placeholder="Email address"
                 value={formData.email}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
             <div>
@@ -99,6 +105,7 @@ export default function RegisterPage() {
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={loading}
               />
             </div>
           </div>
@@ -106,9 +113,10 @@ export default function RegisterPage() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              disabled={loading}
             >
-              Register
+              {loading ? 'Registering...' : 'Register'}
             </button>
           </div>
         </form>
