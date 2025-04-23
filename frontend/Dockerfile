@@ -12,6 +12,9 @@ RUN npm ci
 # Copy the source code
 COPY . .
 
+# Create default .env.local if not exists
+RUN if [ ! -f .env.local ]; then echo "NEXT_PUBLIC_API_URL=http://localhost:3001" > .env.local; fi
+
 # Build the application
 RUN npm run build
 
@@ -28,7 +31,7 @@ COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/.env.local ./.env.local
 
 # Install production dependencies only
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Expose port 3000
 EXPOSE 3000

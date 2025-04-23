@@ -1,5 +1,14 @@
 basePath: /api
 definitions:
+  handlers.BorrowCount:
+    properties:
+      book_id:
+        type: integer
+      book_title:
+        type: string
+      borrows:
+        type: integer
+    type: object
   models.Book:
     properties:
       author:
@@ -93,7 +102,18 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get the distribution of books across categories
+      description: Get the distribution of books across categories. For admin users,
+        shows all categories. For regular users, shows only categories of books they've
+        borrowed.
+      parameters:
+      - description: Username to filter results (required for non-admin users)
+        in: query
+        name: username
+        type: string
+      - description: User role (admin/user) to determine data scope
+        in: query
+        name: role
+        type: string
       produces:
       - application/json
       responses:
@@ -116,7 +136,17 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get lending counts grouped by month
+      description: Get lending counts grouped by month. For admin users, shows all
+        lending trends. For regular users, shows only their lending history.
+      parameters:
+      - description: Username to filter results (required for non-admin users)
+        in: query
+        name: username
+        type: string
+      - description: User role (admin/user) to determine data scope
+        in: query
+        name: role
+        type: string
       produces:
       - application/json
       responses:
@@ -139,7 +169,17 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a list of books ordered by number of times borrowed
+      description: Get a list of books ordered by number of times borrowed. For admin
+        users, shows all books. For regular users, shows only their borrowed books.
+      parameters:
+      - description: Username to filter results (required for non-admin users)
+        in: query
+        name: username
+        type: string
+      - description: User role (admin/user) to determine data scope
+        in: query
+        name: role
+        type: string
       produces:
       - application/json
       responses:
@@ -147,7 +187,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.Book'
+              $ref: '#/definitions/handlers.BorrowCount'
             type: array
         "500":
           description: Internal Server Error

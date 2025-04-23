@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/analytics/category-distribution": {
             "get": {
-                "description": "Get the distribution of books across categories",
+                "description": "Get the distribution of books across categories. For admin users, shows all categories. For regular users, shows only categories of books they've borrowed.",
                 "consumes": [
                     "application/json"
                 ],
@@ -28,6 +28,20 @@ const docTemplate = `{
                     "analytics"
                 ],
                 "summary": "Get category distribution",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to filter results (required for non-admin users)",
+                        "name": "username",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User role (admin/user) to determine data scope",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -52,7 +66,7 @@ const docTemplate = `{
         },
         "/analytics/monthly-trends": {
             "get": {
-                "description": "Get lending counts grouped by month",
+                "description": "Get lending counts grouped by month. For admin users, shows all lending trends. For regular users, shows only their lending history.",
                 "consumes": [
                     "application/json"
                 ],
@@ -63,6 +77,20 @@ const docTemplate = `{
                     "analytics"
                 ],
                 "summary": "Get monthly lending trends",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to filter results (required for non-admin users)",
+                        "name": "username",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User role (admin/user) to determine data scope",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -87,7 +115,7 @@ const docTemplate = `{
         },
         "/analytics/most-borrowed": {
             "get": {
-                "description": "Get a list of books ordered by number of times borrowed",
+                "description": "Get a list of books ordered by number of times borrowed. For admin users, shows all books. For regular users, shows only their borrowed books.",
                 "consumes": [
                     "application/json"
                 ],
@@ -98,13 +126,27 @@ const docTemplate = `{
                     "analytics"
                 ],
                 "summary": "Get most borrowed books",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to filter results (required for non-admin users)",
+                        "name": "username",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User role (admin/user) to determine data scope",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Book"
+                                "$ref": "#/definitions/handlers.BorrowCount"
                             }
                         }
                     },
@@ -726,6 +768,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.BorrowCount": {
+            "type": "object",
+            "properties": {
+                "book_id": {
+                    "type": "integer"
+                },
+                "book_title": {
+                    "type": "string"
+                },
+                "borrows": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.Book": {
             "type": "object",
             "properties": {

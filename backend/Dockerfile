@@ -18,6 +18,9 @@ COPY . .
 # Generate Swagger documentation
 RUN swag init
 
+# Create a default .env file if not exists
+RUN if [ ! -f .env ]; then echo "DATABASE_URL=postgres://postgres:postgres@db:5432/digital_library?sslmode=disable\nJWT_SECRET=your_jwt_secret_here" > .env; fi
+
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
